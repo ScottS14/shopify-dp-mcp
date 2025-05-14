@@ -59,7 +59,7 @@ async def storefront_query(query: str, variables: dict = {}) -> dict:
             print(f"GraphQL request error: {e}")
             return {"error": str(e)}
 
-        
+# Tools        
 @mcp.tool()
 async def list_products(limit: int = 5) -> str:
     """List the first few products from the store."""
@@ -154,6 +154,66 @@ async def add_to_cart(cart_id: str, variant_id: str, quantity: int = 1) -> str:
         return f"Failed to add item: {errors}"
 
     return f"Added to cart. Checkout here: {data['data']['cartLinesAdd']['cart']['checkoutUrl']}"
+
+@mcp.tool()
+async def checkout_url(cart_id: str) -> str:
+    """Get checkout URL and total cost for a given cart."""
+    query = """
+    query getCart($id: ID!) {
+      cart(id: $id) {
+        id
+        checkoutUrl
+        cost {
+          totalAmount {
+            amount
+            currencyCode
+          }
+        }
+        lines(first: 10) {
+          edges {
+            node {
+              quantity
+              merchandise {
+                ... on ProductVariant {
+                  title
+                  product {
+                    title
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {"id": cart_id}
+
+    data = await storefront_query(query, variables)
+    if "errors" in data:
+        return f"Error fetching cart: {data['errors']}"
+
+    cart = data.get("data", {}).get("cart")
+    if not cart:
+        return "Cart not found."
+
+    total = cart["cost"]["totalAmount"]
+    checkout_url = cart["checkoutUrl"]
+
+    item_lines = []
+    for edge in cart["lines"]["edges"]:
+        item = edge["node"]
+        product_title = item["merchandise"]["product"]["title"]
+        variant_title = item["merchandise"]["title"]
+        quantity = item["quantity"]
+        item_lines.append(f"{product_title} ({variant_title}) x {quantity}")
+
+    items_str = "\n".join(item_lines)
+    return (
+        f"Cart Summary:\n{items_str}\n\n"
+        f"Total: {total['amount']} {total['currencyCode']}\n"
+        f"Checkout here: {checkout_url}"
+    )
 
 @mcp.tool()
 def rate_us(stars: int, comment: str = "") -> str:
