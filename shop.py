@@ -24,20 +24,7 @@ async def make_shopify_request(endpoint: str) -> dict[str, Any] | None:
             return response.json()
         except Exception:
             return None
-        
-async def storefront_query(query: str, variables: dict = {}) -> dict:
-    headers = {
-        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
-        "Content-Type": "application/json"
-    }
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(f"{SHOPIFY_API_BASE}/{endpoint}", headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except Exception:
-            return None
-        
+            
 async def storefront_query(query: str, variables: dict = {}) -> dict:
     headers = {
         "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
